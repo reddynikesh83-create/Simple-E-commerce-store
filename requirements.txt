@@ -1,0 +1,4 @@
+# CodeAlpha Task 1: Simple E-Commerce Store (Django Python Backend)
+Django>=4.2,<6.0
+asgiref>=3.7.0
+sqlparse>=0.4.4

@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Zovira | 3D Interactive E-Commerce Store</title>
+  <meta name="description" content="Zovira: Next-Gen 3D Interactive E-Commerce Store with real-time 3D product previews and Express.js REST API Backend" />
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <!-- Three.js Library for 3D WebGL Graphics -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <!-- Main Stylesheet -->
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <!-- ==========================================================================
+       Navigation Bar
+       ========================================================================== -->
+  <header class="navbar">
+    <div class="nav-container">
+      <a href="index.html" class="brand" title="Zovira 3D Store">
+        <div class="brand-icon">💎</div>
+        <span>Zovira</span>
+      </a>
+
+      <!-- Search Input -->
+      <div class="nav-search">
+        <span class="search-icon">🔍</span>
+        <input 
+          type="text" 
+          id="search-input" 
+          placeholder="Search 3D products, electronics, fashion, decor..." 
+          aria-label="Search products" 
+        />
+      </div>
+
+      <!-- Actions: Status, Cart, Auth -->
+      <div class="nav-actions">
+
+
+        <!-- Cart Button -->
+        <button class="btn-icon" id="btn-open-cart" onclick="cartManager.toggleCartDrawer(true)" aria-label="Shopping Cart">
+          🛒 <span class="hide-mobile">Cart</span>
+          <span class="badge" id="cart-count-badge">0</span>
+        </button>
+
+        <!-- Auth Container (dynamically updated via auth.js) -->
+        <div id="nav-auth-container">
+          <button class="btn-primary" onclick="authManager.openAuthModal()">
+            Sign In
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ==========================================================================
+       Hero Banner with Interactive 3D Stage
+       ========================================================================== -->
+  <section class="hero-banner">
+    <div class="hero-content">
+      <div class="hero-text">
+        <h1 class="hero-title">Discover the Future at <span class="gradient-text">Zovira</span></h1>
+      </div>
+
+      <!-- Hero 3D Stage Container -->
+      <div class="hero-3d-stage">
+        <div class="hero-3d-canvas-container" id="hero-3d-canvas-container" title="Click & drag to rotate 3D headset">
+          <!-- 3D Canvas injected by three3d.js -->
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==========================================================================
+       Main Store Content
+       ========================================================================== -->
+  <main class="main-container">
+    <!-- Toolbar: Categories & Sorting -->
+    <div class="store-toolbar">
+      <div class="category-pills" id="category-pills">
+        <!-- Dynamically populated from products.js -->
+        <button class="category-pill active" onclick="productManager.setCategory('All')">All</button>
+      </div>
+
+      <div class="filter-controls">
+        <label for="sort-select" style="font-size: 0.88rem; font-weight: 500; color: var(--text-muted);">Sort By:</label>
+        <select id="sort-select" class="select-control">
+          <option value="default">Featured</option>
+          <option value="price-asc">Price: Low to High</option>
+          <option value="price-desc">Price: High to Low</option>
+          <option value="rating">Highest Rated</option>
+          <option value="name-asc">Alphabetical (A-Z)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Product Grid Container -->
+    <div class="products-grid" id="products-grid">
+      <!-- Dynamically populated with product cards -->
+    </div>
+  </main>
+
+  <!-- ==========================================================================
+       Shopping Cart Slide-in Drawer
+       ========================================================================== -->
+  <div class="drawer-backdrop" id="cart-drawer-backdrop">
+    <div class="drawer" id="cart-drawer">
+      <div class="drawer-header">
+        <div class="drawer-title">
+          <span>🛒</span> Shopping Cart
+        </div>
+        <button class="modal-close" style="position: static;" onclick="cartManager.toggleCartDrawer(false)" title="Close Cart">✕</button>
+      </div>
+
+      <div class="drawer-body" id="cart-items-container">
+        <!-- Dynamically rendered cart items -->
+      </div>
+
+      <div class="drawer-footer" id="cart-drawer-footer">
+        <div id="cart-drawer-summary">
+          <!-- Summary rows dynamically calculated -->
+        </div>
+        <button class="btn-primary" style="width: 100%; padding: 0.85rem; font-size: 1rem;" onclick="cartManager.toggleCartDrawer(false); checkoutManager.openCheckoutModal();">
+          Proceed to Checkout →
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       Product Details Modal
+       ========================================================================== -->
+  <div class="modal-backdrop" id="product-modal-backdrop">
+    <div class="modal-content" style="max-width: 860px;">
+      <button class="modal-close" onclick="productManager.closeProductModal()" title="Close details">✕</button>
+      <div id="product-modal-body">
+        <!-- Loaded dynamically from products.js -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       Checkout & Order Processing Modal
+       ========================================================================== -->
+  <div class="modal-backdrop" id="checkout-modal-backdrop">
+    <div class="modal-content checkout-modal-content">
+      <button class="modal-close" onclick="checkoutManager.closeCheckoutModal()" title="Close checkout">✕</button>
+      
+      <form id="checkout-form" onsubmit="checkoutManager.handleOrderSubmit(event)">
+        <div class="checkout-grid">
+          <!-- Left Column: Shipping & Payment -->
+          <div>
+            <div class="checkout-section-title">
+              <span>📍</span> 1. Shipping Details
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Full Name *</label>
+              <input type="text" id="checkout-name" class="form-input" placeholder="e.g. John Doe" required />
+            </div>
+
+            <div class="form-row">
+              <div class="form-group" style="flex: 1;">
+                <label class="form-label">Email Address *</label>
+                <input type="email" id="checkout-email" class="form-input" placeholder="john@example.com" required />
+              </div>
+              <div class="form-group" style="flex: 1;">
+                <label class="form-label">Phone Number *</label>
+                <input type="tel" id="checkout-phone" class="form-input" placeholder="+1 (555) 000-0000" required />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Street Address *</label>
+              <input type="text" id="checkout-street" class="form-input" placeholder="123 Innovation Way, Suite 400" required />
+            </div>
+
+            <div class="form-row">
+              <div class="form-group" style="flex: 2;">
+                <label class="form-label">City *</label>
+                <input type="text" id="checkout-city" class="form-input" placeholder="San Francisco" required />
+              </div>
+              <div class="form-group" style="flex: 1;">
+                <label class="form-label">State *</label>
+                <input type="text" id="checkout-state" class="form-input" placeholder="CA" required />
+              </div>
+              <div class="form-group" style="flex: 1;">
+                <label class="form-label">ZIP Code *</label>
+                <input type="text" id="checkout-zip" class="form-input" placeholder="94107" required />
+              </div>
+            </div>
+
+            <div class="checkout-section-title" style="margin-top: 1.5rem;">
+              <span>💳</span> 2. Payment Method
+            </div>
+
+            <div class="payment-options">
+              <label class="payment-option-card">
+                <input type="radio" name="payment-method" value="Card" checked />
+                <span class="payment-label">Credit / Debit Card</span>
+              </label>
+              <label class="payment-option-card">
+                <input type="radio" name="payment-method" value="UPI" />
+                <span class="payment-label">UPI / PayPal / NetBanking</span>
+              </label>
+              <label class="payment-option-card">
+                <input type="radio" name="payment-method" value="Cash on Delivery" />
+                <span class="payment-label">Cash on Delivery (COD)</span>
+              </label>
+            </div>
+
+            <!-- Card Simulation Fields -->
+            <div id="card-fields" style="background: var(--bg-subtle); padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--border); margin-bottom: 1.25rem;">
+              <div class="form-group">
+                <label class="form-label">Card Number</label>
+                <input type="text" class="form-input" placeholder="4532 •••• •••• 8892" maxlength="19" value="4532 8920 1123 8892" />
+              </div>
+              <div class="form-row">
+                <div class="form-group" style="flex: 1;">
+                  <label class="form-label">Expiry Date</label>
+                  <input type="text" class="form-input" placeholder="MM/YY" maxlength="5" value="08/28" />
+                </div>
+                <div class="form-group" style="flex: 1;">
+                  <label class="form-label">CVV</label>
+                  <input type="password" class="form-input" placeholder="•••" maxlength="4" value="789" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Column: Order Summary & Placement -->
+          <div>
+            <div class="checkout-order-summary">
+              <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem;">Order Summary</h3>
+              
+              <div id="checkout-items-list" style="max-height: 180px; overflow-y: auto; margin-bottom: 1rem;">
+                <!-- Mini items list -->
+              </div>
+
+              <!-- Promo Code Input -->
+              <div class="coupon-group">
+                <input type="text" id="checkout-coupon-input" class="form-input" placeholder="Promo code (e.g. ALPHA10)" />
+                <button type="button" class="btn-secondary" onclick="checkoutManager.applyCoupon()">Apply</button>
+              </div>
+              <div id="checkout-coupon-msg" style="font-size: 0.8rem; margin-bottom: 0.75rem; font-weight: 500;"></div>
+
+              <div id="checkout-totals">
+                <!-- Totals breakdown -->
+              </div>
+
+              <button type="submit" id="btn-submit-order" class="btn-primary" style="width: 100%; padding: 0.85rem; font-size: 1rem; margin-top: 1rem;">
+                🔒 Place Order & Pay
+              </button>
+              <div style="font-size: 0.75rem; color: var(--text-muted); text-align: center; margin-top: 0.5rem;">
+                🛡️ 256-bit SSL encrypted checkout
+              </div>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       Order Success Confirmation Receipt Modal
+       ========================================================================== -->
+  <div class="modal-backdrop" id="success-modal-backdrop">
+    <div class="modal-content" style="max-width: 580px;">
+      <button class="modal-close" onclick="checkoutManager.closeSuccessModal()">✕</button>
+      <div id="success-modal-body">
+        <!-- Rendered by checkoutManager.openSuccessModal -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       User Authentication Modal (Sign In & Register)
+       ========================================================================== -->
+  <!-- ==========================================================================
+       User Authentication Modal (Big Size Two-Column Split Layout)
+       ========================================================================== -->
+  <div class="modal-backdrop" id="auth-modal-backdrop">
+    <div class="modal-content auth-card-big">
+      <button class="modal-close auth-big-close" onclick="authManager.closeAuthModal()">✕</button>
+
+      <!-- Left Column: Zovira Luxury 3D Showcase Panel -->
+      <div class="auth-showcase-panel">
+        <div class="auth-showcase-header">
+          <div class="auth-brand-badge">
+            <span class="auth-brand-gem">💎</span>
+            <span class="auth-brand-name">Zovira</span>
+            <span class="auth-vip-tag">PRO</span>
+          </div>
+          <h2 class="auth-showcase-title">Next-Gen 3D Shopping at Your Fingertips</h2>
+          <p class="auth-showcase-desc">
+            Sign in to experience high-fidelity 3D headset models, access saved orders, and enjoy members-only discounts.
+          </p>
+        </div>
+
+        <div class="auth-features-list">
+          <div class="auth-feature-row">
+            <div class="auth-feature-icon">🎧</div>
+            <div class="auth-feature-info">
+              <h4>Real-Time 3D Interactive Headset</h4>
+              <p>Spin 360°, inspect acoustics, and view specular details</p>
+            </div>
+          </div>
+          <div class="auth-feature-row">
+            <div class="auth-feature-icon">⚡</div>
+            <div class="auth-feature-info">
+              <h4>Instant Connected Checkout</h4>
+              <p>Fast order placement with digital receipts & tracking</p>
+            </div>
+          </div>
+          <div class="auth-feature-row">
+            <div class="auth-feature-icon">🏷️</div>
+            <div class="auth-feature-info">
+              <h4>10% Welcome Promo Code</h4>
+              <p>Use code <strong>ZOVIRA10</strong> or <strong>ALPHA10</strong> on your cart</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="auth-showcase-footer">
+          <div class="auth-quote">
+            <div class="auth-stars">★★★★★</div>
+            <p>"The 3D model orbit is stunning. Shopping at Zovira feels like 2030."</p>
+            <span class="auth-buyer">— Alex Morgan, Verified Customer</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Big Form Panel -->
+      <div class="auth-form-panel">
+        <div class="auth-form-top">
+          <div class="auth-tabs-segmented">
+            <button type="button" class="auth-tab-pill active" id="tab-btn-login" onclick="authManager.switchTab('login')">
+              Sign In
+            </button>
+            <button type="button" class="auth-tab-pill" id="tab-btn-register" onclick="authManager.switchTab('register')">
+              Create Account
+            </button>
+          </div>
+
+          <button type="button" class="btn-demo-autofill" onclick="authManager.loginWithDemo()" title="Sign in with demo account">
+            <span>⚡</span> Demo Fill
+          </button>
+        </div>
+
+        <!-- Login Form -->
+        <form id="auth-login-form" class="auth-actual-form" onsubmit="authManager.handleLogin(event)">
+          <div class="auth-form-heading">
+            <h3>Welcome Back!</h3>
+            <p>Enter your account credentials to access Zovira.</p>
+          </div>
+
+          <div id="login-error" class="auth-error-msg"></div>
+
+          <div class="form-group-big">
+            <label class="form-label-big">
+              <span>✉️</span> Email Address
+            </label>
+            <input 
+              type="email" 
+              id="login-email" 
+              class="form-input-big" 
+              placeholder="alex@example.com" 
+              autocomplete="email"
+              required 
+            />
+          </div>
+
+          <div class="form-group-big">
+            <div class="form-label-row">
+              <label class="form-label-big">
+                <span>🔒</span> Password
+              </label>
+              <a href="javascript:void(0)" onclick="window.showToast('Demo: Use password123 to log in!', 'info')" class="auth-forgot-link">Forgot?</a>
+            </div>
+            <input 
+              type="password" 
+              id="login-password" 
+              class="form-input-big" 
+              placeholder="••••••••" 
+              autocomplete="current-password"
+              required 
+            />
+          </div>
+
+          <div class="auth-remember-row">
+            <label class="auth-checkbox-label">
+              <input type="checkbox" id="login-remember" checked />
+              <span>Remember me for 30 days</span>
+            </label>
+          </div>
+
+          <button type="submit" class="btn-auth-submit">
+            Sign In to Zovira ➔
+          </button>
+        </form>
+
+        <!-- Register Form -->
+        <form id="auth-register-form" class="auth-actual-form" style="display: none;" onsubmit="authManager.handleRegister(event)">
+          <div class="auth-form-heading">
+            <h3>Create Free Account</h3>
+            <p>Join Zovira to enjoy members-only pricing and 3D previews.</p>
+          </div>
+
+          <div id="register-error" class="auth-error-msg"></div>
+
+          <div class="form-group-big">
+            <label class="form-label-big">
+              <span>👤</span> Full Name *
+            </label>
+            <input type="text" id="register-name" class="form-input-big" placeholder="e.g. Alex Morgan" required />
+          </div>
+
+          <div class="form-group-big">
+            <label class="form-label-big">
+              <span>✉️</span> Email Address *
+            </label>
+            <input type="email" id="register-email" class="form-input-big" placeholder="alex@example.com" required />
+          </div>
+
+          <div class="form-group-big">
+            <label class="form-label-big">
+              <span>🔒</span> Create Password *
+            </label>
+            <input type="password" id="register-password" class="form-input-big" placeholder="Minimum 6 characters" minlength="6" required />
+          </div>
+
+          <div class="form-row-big">
+            <div class="form-group-big" style="flex: 1;">
+              <label class="form-label-big">
+                <span>📱</span> Phone (Optional)
+              </label>
+              <input type="tel" id="register-phone" class="form-input-big" placeholder="+1 (555) 000-0000" />
+            </div>
+            <div class="form-group-big" style="flex: 1.2;">
+              <label class="form-label-big">
+                <span>📍</span> City, Country
+              </label>
+              <input type="text" id="register-address" class="form-input-big" placeholder="e.g. New York, USA" />
+            </div>
+          </div>
+
+          <button type="submit" class="btn-auth-submit">
+            Create Zovira Account ➔
+          </button>
+        </form>
+
+        <div class="auth-security-footnote">
+          <span>🔒 256-bit SSL Secure</span> • <span>🔑 PBKDF2 Password Hashing</span> • <span>🛡️ JWT Session</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       My Orders History Modal
+       ========================================================================== -->
+  <div class="modal-backdrop" id="orders-modal-backdrop">
+    <div class="modal-content" style="max-width: 650px;">
+      <button class="modal-close" onclick="authManager.closeOrdersModal()">✕</button>
+      <div style="padding: 2rem;">
+        <h2 style="font-size: 1.4rem; font-weight: 800; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem;">
+          <span>📦</span> My Order History
+        </h2>
+        <div id="orders-list-container">
+          <!-- Populated by authManager.openOrdersModal -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       Profile Edit Modal
+       ========================================================================== -->
+  <div class="modal-backdrop" id="profile-modal-backdrop">
+    <div class="modal-content" style="max-width: 500px;">
+      <button class="modal-close" onclick="authManager.closeProfileModal()">✕</button>
+      <div style="padding: 2rem;">
+        <h2 style="font-size: 1.4rem; font-weight: 800; margin-bottom: 1.25rem;">My Profile</h2>
+        <form onsubmit="authManager.handleProfileUpdate(event)">
+          <div class="form-group">
+            <label class="form-label">Name</label>
+            <input type="text" id="profile-name" class="form-input" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email (Read only)</label>
+            <input type="email" id="profile-email" class="form-input" disabled style="background: var(--bg-subtle); color: var(--text-muted);" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Phone</label>
+            <input type="tel" id="profile-phone" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Shipping Address</label>
+            <textarea id="profile-address" class="form-input" rows="2"></textarea>
+          </div>
+          <button type="submit" class="btn-primary" style="width: 100%; padding: 0.75rem;">Save Changes</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       Footer
+       ========================================================================== -->
+  <footer class="footer">
+    <div class="footer-content">
+      <div>
+        <div class="footer-brand" style="display: flex; align-items: center; gap: 0.5rem;">
+          <span>💎</span> Zovira 3D Store
+        </div>
+        <p style="font-size: 0.88rem; line-height: 1.6; max-width: 320px;">
+          Next-generation 3D interactive e-commerce platform. Explore our flagship 3D headset with 360° orbital rotation, real-time specifications, and secure checkout.
+        </p>
+      </div>
+      <div class="footer-column">
+        <h4>Tech Stack</h4>
+        <ul>
+          <li>WebGL & Three.js 3D</li>
+          <li>HTML5 & Modern CSS3</li>
+          <li>Vanilla JavaScript (ES6+)</li>
+          <li>Node.js & Express.js REST API</li>
+        </ul>
+      </div>
+      <div class="footer-column">
+        <h4>3D Features</h4>
+        <ul>
+          <li>360° Interactive Orbit</li>
+          <li>Dynamic Specular Lighting</li>
+          <li>Interactive 3D Card Tilts</li>
+          <li>Real-Time 3D Headset Inspection</li>
+        </ul>
+      </div>
+      <div class="footer-column">
+        <h4>Promo Codes</h4>
+        <ul>
+          <li><code>ZOVIRA10</code> (10% Off)</li>
+          <li><code>ALPHA10</code> (10% Off)</li>
+          <li><code>CODEALPHA</code> ($15 Off)</li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 Zovira — CodeAlpha Internship Project Task 1</span>
+      <span>Repo: <strong>CodeAlpha_EcommerceStore</strong></span>
+    </div>
+  </footer>
+
+  <!-- ==========================================================================
+       Client-side JavaScript Modules
+       ========================================================================== -->
+  <script src="js/products-data.js"></script>
+  <script src="js/three3d.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/cart.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/products.js"></script>
+  <script src="js/checkout.js"></script>
+  <script src="js/app.js"></script>
+
+
+</body>
+</html>

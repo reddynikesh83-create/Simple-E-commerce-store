@@ -1,0 +1,24 @@
+{
+  "name": "codealpha-ecommerce-store",
+  "version": "1.0.0",
+  "description": "CodeAlpha Full Stack Development Task 1 - Simple E-commerce Store with connected frontend and Express.js backend",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "keywords": [
+    "ecommerce",
+    "codealpha",
+    "express",
+    "javascript",
+    "fullstack",
+    "rest-api"
+  ],
+  "author": "CodeAlpha Intern",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2"
+  }
+}
