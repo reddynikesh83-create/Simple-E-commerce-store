@@ -1,7 +1,7 @@
 const crypto = require('crypto');
 
 // Secret key for HMAC token signing
-const JWT_SECRET = process.env.JWT_SECRET || 'codealpha_ecommerce_super_secure_key_2026';
+const JWT_SECRET 
 
 /**
  * Hash password with salt using PBKDF2
